@@ -2,98 +2,94 @@ package com.example.chatappcompose.register
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import com.example.chatappcompose.firestore.UsersDao
+import com.example.chatappcompose.firestore.model.User
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
 class RegisterViewModel : ViewModel() {
-    val firstNameState = mutableStateOf("")
-    val firstNameErrorState = mutableStateOf("")
+    val userNameState = mutableStateOf("")
+    val userNameErrorState = mutableStateOf("")
     val emailState = mutableStateOf("")
     val emailErrorState = mutableStateOf("")
     val passwordState = mutableStateOf("")
     val passwordErrorState = mutableStateOf("")
     val passwordConfirmationState = mutableStateOf("")
     val passwordConfirmationErrorState = mutableStateOf("")
+    val dialogMessageState = mutableStateOf("")
+    val isLoadingState = mutableStateOf(false)
+    val navigator: Navigator? = null
 
-    fun validateFields(): Boolean {
+    private val auth = Firebase.auth
+
+    fun register() {
+        if (!validateFields()) return
+        //loading
+        isLoadingState.value = true
+        auth.createUserWithEmailAndPassword(
+            emailState.value,
+            passwordState.value
+        )
+            .addOnCompleteListener { task ->
+                isLoadingState.value = false
+                if (task.isSuccessful) {
+                    insertUserToFirestore(task.result.user?.uid)
+
+
+                } else {
+                    //show error
+                    dialogMessageState.value =
+                        task.exception?.localizedMessage ?: "Something went wrong"
+                }
+            }
+    }
+
+    private fun insertUserToFirestore(uid: String?) {
+        val user = User(
+            id = uid,
+            userName = userNameState.value,
+            email = emailState.value
+        )
+        UsersDao.createUser(user) { task ->
+            if (task.isSuccessful) {
+
+            } else {
+                dialogMessageState.value =
+                    task.exception?.localizedMessage ?: "Something went wrong"
+            }
+        }
+    }
+
+
+    private fun validateFields(): Boolean {
         var isValid = true
-        if (firstNameState.value.isBlank()) {
-            firstNameErrorState.value = "First name required"
-             isValid = false
+        if (userNameState.value.isBlank()) {
+            userNameErrorState.value = "First name required"
+            isValid = false
         } else
-            firstNameErrorState.value = ""
+            userNameErrorState.value = ""
 
         if (emailState.value.isBlank()) {
             emailErrorState.value = "Email required"
-             isValid = false
+            isValid = false
         } else
             emailErrorState.value = ""
 
         if (passwordState.value.isBlank()) {
             passwordErrorState.value = "Password required"
-             isValid = false
+            isValid = false
         } else
             passwordErrorState.value = ""
 
         if (passwordConfirmationState.value != passwordState.value) {
             passwordConfirmationErrorState.value = "Password doesn't match"
-             isValid = false
+            isValid = false
         } else
             passwordConfirmationErrorState.value = ""
         return isValid
     }
 
-//        if (firstNameState.value.isEmpty() && firstNameState.value.isBlank()
-//            && emailState.value.isEmpty() && emailState.value.isBlank()
-//            && passwordState.value.isEmpty() && passwordState.value.isBlank()
-//        ) {
-//            firstNameErrorState.value = "First Name Required"
-//            emailErrorState.value = "Email Required"
-//            passwordErrorState.value = "Password Required"
-//        }
-//        return true
-//    }
-//      if (firstNameState.value.isEmpty() || firstNameState.value.isBlank()) {
-//            firstNameErrorState.value = "First name Required"
-//            return false
-//        }
-//        if (firstNameState.value.isNotEmpty() || firstNameState.value.isNotBlank()
-//            && emailState.value.isEmpty() || emailState.value.isBlank()
-//            && passwordState.value.isEmpty() || passwordState.value.isBlank()
-//        ) {
-//            firstNameErrorState.value = ""
-//            emailErrorState.value = "Email Required"
-//            passwordErrorState.value = "Password Required"
-//
-//        }
-//        if (emailState.value.isEmpty() || emailState.value.isBlank()) {
-//            emailErrorState.value = "Email Required"
-//            return false
-//        }
-//        if (emailState.value.isNotEmpty() || emailState.value.isNotBlank()
-//            && firstNameState.value.isEmpty() || firstNameState.value.isBlank()
-//            && passwordState.value.isEmpty() || passwordState.value.isBlank()
-//        ) {
-//            emailErrorState.value = ""
-//            firstNameErrorState.value = "First name Required"
-//            passwordErrorState.value = "Password Required"
-//
-//        }
-//        if (passwordState.value.isEmpty() || passwordState.value.isBlank()) {
-//            passwordErrorState.value = "Password Required"
-//            return false
-//        }
-//        if (passwordState.value.isNotEmpty() || passwordState.value.isNotBlank()
-//            && firstNameState.value.isEmpty() || firstNameState.value.isBlank()
-//            && emailState.value.isEmpty() || emailState.value.isBlank()
-//        ) {
-//            passwordErrorState.value = ""
-//            firstNameErrorState.value = "First name Required"
-//            emailErrorState.value = "Email Required"
-//        }
-
-
-    fun sendDataToFirebaseAuth() {
-        if (validateFields()) {
-        }
-    }
 }
+
+
 
